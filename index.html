@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurable AI Chatbot</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg-color: #f3f4f6;
+            --panel-bg: #ffffff;
+            --text-main: #1f2937;
+            --text-muted: #6b7280;
+            --border: #e5e7eb;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; flex-direction: row; overflow: hidden; }
+        
+        /* Layout */
+        .sidebar { 
+            width: 320px; 
+            background: var(--panel-bg); 
+            border-right: 1px solid var(--border); 
+            padding: 20px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 20px; 
+            overflow-y: auto; 
+            transition: transform 0.3s ease;
+            z-index: 20;
+        }
+        .main-chat { flex: 1; display: flex; flex-direction: column; height: 100vh; position: relative; }
+        
+        /* Header & Toggle Button */
+        .chat-header {
+            display: flex;
+            align-items: center;
+            padding: 15px 20px;
+            background: var(--panel-bg);
+            border-bottom: 1px solid var(--border);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .menu-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--text-main);
+            cursor: pointer;
+            margin-right: 15px;
+            display: none; /* Hidden on desktop */
+            padding: 5px;
+        }
+        .chat-title { font-weight: 600; font-size: 1.1rem; color: var(--primary); }
+
+        /* Overlay for mobile */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 10;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Sidebar Elements */
+        h2 { font-size: 1.3rem; color: var(--primary); margin-bottom: 5px; }
+        .config-group { display: flex; flex-direction: column; gap: 8px; }
+        label { font-size: 0.9rem; font-weight: 600; }
+        textarea, input[type="text"] { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; }
+        textarea:focus, input[type="text"]:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }
+        textarea { resize: vertical; min-height: 120px; }
+        button.save-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: background 0.2s; width: 100%; }
+        button.save-btn:hover { background: #1d4ed8; }
+
+        /* Chat Area */
+        .chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: var(--bg-color); scroll-behavior: smooth; }
+        .message { max-width: 80%; padding: 12px 18px; border-radius: 16px; line-height: 1.5; font-size: 0.95rem; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .message.bot { background: var(--panel-bg); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 4px; }
+        .message.user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .message.error { background: #fee2e2; border: 1px solid #f87171; color: #991b1b; align-self: flex-start; }
+        
+        /* Input Area */
+        .input-area { padding: 20px; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; gap: 12px; }
+        .input-area input { flex: 1; margin-bottom: 0; border-radius: 24px; padding: 12px 20px; }
+        .send-btn { background: var(--primary); color: white; border: none; padding: 0 24px; border-radius: 24px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
+        .send-btn:hover { background: #1d4ed8; }
+        .send-btn:disabled { background: #93c5fd; cursor: not-allowed; }
+
+        /* Responsive Mobile Layout */
+        @media (max-width: 768px) {
+            .menu-btn { display: block; }
+            .sidebar { 
+                position: fixed; 
+                height: 100vh; 
+                transform: translateX(-100%); 
+                box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+            }
+            .sidebar.open { transform: translateX(0); }
+            .overlay.open { display: block; opacity: 1; }
+            .message { max-width: 90%; }
+            .input-area { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+    <div class="sidebar" id="sidebar">
+        <div>
+            <h2>Bot Configuration</h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Adjust settings to change bot behavior.</p>
+        </div>
+
+        <div class="config-group">
+            <label for="systemPrompt">System Prompt</label>
+            <textarea id="systemPrompt">You are a helpful, friendly AI assistant. Answer concisely.</textarea>
+        </div>
+
+        <div class="config-group">
+            <label for="startMsg">Beginning Sentence</label>
+            <input type="text" id="startMsg" value="Hello! How can I help you today?">
+        </div>
+
+        <div>
+            <button class="save-btn" onclick="applyConfiguration()">Save & Restart Chat</button>
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 12px; text-align: center;">Clicking save clears the current conversation.</p>
+        </div>
+    </div>
+
+    <div class="main-chat">
+        <div class="chat-header">
+            <button class="menu-btn" onclick="toggleSidebar()">☰</button>
+            <div class="chat-title">AI Assistant</div>
+        </div>
+
+        <div class="chat-container" id="chatContainer">
+            </div>
+        
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)" autocomplete="off">
+            <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+
+    <script>
+        let chatHistory = [];
+        let currentSystemPrompt = "";
+
+        // Initialize chat on load
+        window.onload = () => applyConfiguration();
+
+        // Mobile Sidebar Toggle Logic
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('overlay');
+            sidebar.classList.toggle('open');
+            overlay.classList.toggle('open');
+        }
+
+        function applyConfiguration() {
+            currentSystemPrompt = document.getElementById('systemPrompt').value;
+            const startMsgText = document.getElementById('startMsg').value;
+
+            const chatContainer = document.getElementById('chatContainer');
+            chatContainer.innerHTML = '';
+            chatHistory = [];
+
+            if (startMsgText.trim() !== "") {
+                chatHistory.push({ role: "assistant", content: startMsgText });
+                appendMessage("bot", startMsgText);
+            }
+
+            // Close sidebar on mobile after saving
+            if (window.innerWidth <= 768) {
+                const sidebar = document.getElementById('sidebar');
+                if (sidebar.classList.contains('open')) {
+                    toggleSidebar();
+                }
+            }
+        }
+
+        function appendMessage(sender, text, isError = false) {
+            const chatContainer = document.getElementById('chatContainer');
+            const msgDiv = document.createElement('div');
+            
+            // Add appropriate classes
+            msgDiv.classList.add('message', sender);
+            if (isError) msgDiv.classList.add('error');
+            
+            // Handle simple formatting for error messages (like adding a warning icon)
+            msgDiv.innerHTML = isError ? `⚠️ ${text}` : text;
+            
+            chatContainer.appendChild(msgDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') sendMessage();
+        }
+
+        async function sendMessage() {
+            const inputField = document.getElementById('userInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const userText = inputField.value.trim();
+
+            if (!userText) return;
+
+            appendMessage("user", userText);
+            inputField.value = '';
+            sendBtn.disabled = true;
+            inputField.disabled = true;
+            
+            // Create a loading message id so we can remove it easily
+            const loadingId = "loading-" + Date.now();
+            const chatContainer = document.getElementById('chatContainer');
+            const loadingDiv = document.createElement('div');
+            loadingDiv.classList.add('message', 'bot');
+            loadingDiv.id = loadingId;
+            loadingDiv.innerHTML = "<i>Thinking...</i>";
+            chatContainer.appendChild(loadingDiv);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            chatHistory.push({ role: "user", content: userText });
+
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        system_prompt: currentSystemPrompt,
+                        messages: chatHistory
+                    })
+                });
+
+                // Remove loading message
+                document.getElementById(loadingId).remove();
+
+                if (!response.ok) throw new Error("Could not connect to the server.");
+                
+                const data = await response.json();
+                
+                appendMessage("bot", data.reply);
+                chatHistory.push({ role: "assistant", content: data.reply });
+
+            } catch (error) {
+                console.error("Error:", error);
+                // Ensure loading message is removed if request fails
+                const loadingEl = document.getElementById(loadingId);
+                if(loadingEl) loadingEl.remove();
+                
+                appendMessage("bot", error.message, true); // true sets the error styling
+                chatHistory.pop(); 
+            } finally {
+                sendBtn.disabled = false;
+                inputField.disabled = false;
+                inputField.focus();
+            }
+        }
+    </script>
+</body>
+</html>
