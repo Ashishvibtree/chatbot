@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Chatbot</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Configurable AI Chatbot</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -14,7 +14,16 @@
             --border: #e5e7eb;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--bg-color); color: var(--text-main); display: flex; height: 100vh; flex-direction: row; overflow: hidden; }
+        
+        /* FIX FOR MOBILE: Use dvh (dynamic viewport height) so the input bar isn't hidden by the mobile browser's address bar */
+        body { 
+            background-color: var(--bg-color); 
+            color: var(--text-main); 
+            display: flex; 
+            height: 100dvh; 
+            flex-direction: row; 
+            overflow: hidden; 
+        }
         
         /* Layout */
         .sidebar { 
@@ -29,7 +38,7 @@
             transition: transform 0.3s ease;
             z-index: 20;
         }
-        .main-chat { flex: 1; display: flex; flex-direction: column; height: 100vh; position: relative; }
+        .main-chat { flex: 1; display: flex; flex-direction: column; height: 100dvh; position: relative; }
         
         /* Header & Toggle Button */
         .chat-header {
@@ -38,7 +47,10 @@
             padding: 15px 20px;
             background: var(--panel-bg);
             border-bottom: 1px solid var(--border);
+            /* Handle iOS safe areas at the top */
+            padding-top: max(15px, env(safe-area-inset-top)); 
             box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            z-index: 5;
         }
         .menu-btn {
             background: none;
@@ -47,10 +59,23 @@
             color: var(--text-main);
             cursor: pointer;
             margin-right: 15px;
-            display: none; /* Hidden on desktop */
+            display: none; 
             padding: 5px;
         }
         .chat-title { font-weight: 600; font-size: 1.1rem; color: var(--primary); }
+        
+        /* Clear Context Button */
+        .clear-btn {
+            margin-left: auto;
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
 
         /* Overlay for mobile */
         .overlay {
@@ -67,24 +92,39 @@
         h2 { font-size: 1.3rem; color: var(--primary); margin-bottom: 5px; }
         .config-group { display: flex; flex-direction: column; gap: 8px; }
         label { font-size: 0.9rem; font-weight: 600; }
-        textarea, input[type="text"] { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; }
-        textarea:focus, input[type="text"]:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2); }
+        textarea, input[type="text"] { width: 100%; padding: 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; }
+        textarea:focus, input[type="text"]:focus { outline: none; border-color: var(--primary); }
         textarea { resize: vertical; min-height: 120px; }
-        button.save-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; transition: background 0.2s; width: 100%; }
-        button.save-btn:hover { background: #1d4ed8; }
+        button.save-btn { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 1rem; width: 100%; }
 
         /* Chat Area */
-        .chat-container { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; background: var(--bg-color); scroll-behavior: smooth; }
+        .chat-container { 
+            flex: 1; 
+            padding: 20px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px; 
+            background: var(--bg-color); 
+            scroll-behavior: smooth; 
+        }
         .message { max-width: 80%; padding: 12px 18px; border-radius: 16px; line-height: 1.5; font-size: 0.95rem; word-wrap: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
         .message.bot { background: var(--panel-bg); border: 1px solid var(--border); align-self: flex-start; border-bottom-left-radius: 4px; }
         .message.user { background: var(--primary); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
         .message.error { background: #fee2e2; border: 1px solid #f87171; color: #991b1b; align-self: flex-start; }
         
         /* Input Area */
-        .input-area { padding: 20px; background: var(--panel-bg); border-top: 1px solid var(--border); display: flex; gap: 12px; }
-        .input-area input { flex: 1; margin-bottom: 0; border-radius: 24px; padding: 12px 20px; }
-        .send-btn { background: var(--primary); color: white; border: none; padding: 0 24px; border-radius: 24px; cursor: pointer; font-weight: bold; transition: background 0.2s; }
-        .send-btn:hover { background: #1d4ed8; }
+        .input-area { 
+            padding: 15px 20px; 
+            background: var(--panel-bg); 
+            border-top: 1px solid var(--border); 
+            display: flex; 
+            gap: 10px;
+            /* Handle iOS safe areas at the bottom so the bar doesn't hide behind the home indicator */
+            padding-bottom: max(15px, env(safe-area-inset-bottom));
+        }
+        .input-area input { flex: 1; border-radius: 24px; padding: 12px 20px; font-size: 1rem; }
+        .send-btn { background: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 24px; cursor: pointer; font-weight: bold; }
         .send-btn:disabled { background: #93c5fd; cursor: not-allowed; }
 
         /* Responsive Mobile Layout */
@@ -92,14 +132,16 @@
             .menu-btn { display: block; }
             .sidebar { 
                 position: fixed; 
-                height: 100vh; 
+                height: 100dvh; /* Mobile height fix */
                 transform: translateX(-100%); 
                 box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+                /* Handle safe areas inside sidebar */
+                padding-top: max(20px, env(safe-area-inset-top)); 
+                padding-bottom: max(20px, env(safe-area-inset-bottom));
             }
             .sidebar.open { transform: translateX(0); }
             .overlay.open { display: block; opacity: 1; }
             .message { max-width: 90%; }
-            .input-area { padding: 15px; }
         }
     </style>
 </head>
@@ -109,8 +151,8 @@
 
     <div class="sidebar" id="sidebar">
         <div>
-            <h2>Bot Configuration</h2>
-            <p style="font-size: 0.85rem; color: var(--text-muted);">Adjust settings to change bot behavior.</p>
+            <h2>Bot Settings</h2>
+            <p style="font-size: 0.85rem; color: var(--text-muted);">Adjust the AI's personality and greeting.</p>
         </div>
 
         <div class="config-group">
@@ -124,8 +166,7 @@
         </div>
 
         <div>
-            <button class="save-btn" onclick="applyConfiguration()">Save & Restart Chat</button>
-            <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 12px; text-align: center;">Clicking save clears the current conversation.</p>
+            <button class="save-btn" onclick="applyConfiguration()">Save & Restart</button>
         </div>
     </div>
 
@@ -133,25 +174,25 @@
         <div class="chat-header">
             <button class="menu-btn" onclick="toggleSidebar()">☰</button>
             <div class="chat-title">AI Assistant</div>
+            <button class="clear-btn" onclick="applyConfiguration()">Clear Memory</button>
         </div>
 
         <div class="chat-container" id="chatContainer">
             </div>
         
         <div class="input-area">
-            <input type="text" id="userInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)" autocomplete="off">
+            <input type="text" id="userInput" placeholder="Type a message..." onkeypress="handleKeyPress(event)" autocomplete="off">
             <button class="send-btn" id="sendBtn" onclick="sendMessage()">Send</button>
         </div>
     </div>
 
     <script>
-        let chatHistory = [];
+        // THIS ARRAY IS THE "CONTEXT". It remembers everything said.
+        let chatHistory = []; 
         let currentSystemPrompt = "";
 
-        // Initialize chat on load
         window.onload = () => applyConfiguration();
 
-        // Mobile Sidebar Toggle Logic
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('overlay');
@@ -165,6 +206,8 @@
 
             const chatContainer = document.getElementById('chatContainer');
             chatContainer.innerHTML = '';
+            
+            // Wiping this array resets the bot's memory of the conversation
             chatHistory = [];
 
             if (startMsgText.trim() !== "") {
@@ -172,12 +215,9 @@
                 appendMessage("bot", startMsgText);
             }
 
-            // Close sidebar on mobile after saving
             if (window.innerWidth <= 768) {
                 const sidebar = document.getElementById('sidebar');
-                if (sidebar.classList.contains('open')) {
-                    toggleSidebar();
-                }
+                if (sidebar.classList.contains('open')) toggleSidebar();
             }
         }
 
@@ -185,15 +225,17 @@
             const chatContainer = document.getElementById('chatContainer');
             const msgDiv = document.createElement('div');
             
-            // Add appropriate classes
             msgDiv.classList.add('message', sender);
             if (isError) msgDiv.classList.add('error');
             
-            // Handle simple formatting for error messages (like adding a warning icon)
             msgDiv.innerHTML = isError ? `⚠️ ${text}` : text;
             
             chatContainer.appendChild(msgDiv);
-            chatContainer.scrollTop = chatContainer.scrollHeight;
+            
+            // Ensure the container scrolls all the way to the bottom, especially on mobile when keyboard opens
+            setTimeout(() => {
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }, 50);
         }
 
         function handleKeyPress(event) {
@@ -210,9 +252,7 @@
             appendMessage("user", userText);
             inputField.value = '';
             sendBtn.disabled = true;
-            inputField.disabled = true;
             
-            // Create a loading message id so we can remove it easily
             const loadingId = "loading-" + Date.now();
             const chatContainer = document.getElementById('chatContainer');
             const loadingDiv = document.createElement('div');
@@ -222,9 +262,11 @@
             chatContainer.appendChild(loadingDiv);
             chatContainer.scrollTop = chatContainer.scrollHeight;
             
+            // 1. WE SAVE THE USER'S MESSAGE TO MEMORY (CONTEXT)
             chatHistory.push({ role: "user", content: userText });
 
             try {
+                // 2. WE SEND THE ENTIRE CHAT HISTORY (CONTEXT) TO THE API
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -234,7 +276,6 @@
                     })
                 });
 
-                // Remove loading message
                 document.getElementById(loadingId).remove();
 
                 if (!response.ok) throw new Error("Could not connect to the server.");
@@ -242,20 +283,24 @@
                 const data = await response.json();
                 
                 appendMessage("bot", data.reply);
+                
+                // 3. WE SAVE THE AI'S REPLY TO MEMORY (CONTEXT)
                 chatHistory.push({ role: "assistant", content: data.reply });
 
             } catch (error) {
                 console.error("Error:", error);
-                // Ensure loading message is removed if request fails
                 const loadingEl = document.getElementById(loadingId);
                 if(loadingEl) loadingEl.remove();
                 
-                appendMessage("bot", error.message, true); // true sets the error styling
+                appendMessage("bot", error.message, true); 
+                // If it fails, remove the user message so it doesn't break future context
                 chatHistory.pop(); 
             } finally {
                 sendBtn.disabled = false;
-                inputField.disabled = false;
-                inputField.focus();
+                // Don't auto-focus on mobile to prevent the keyboard from jumping up aggressively
+                if (window.innerWidth > 768) {
+                    inputField.focus();
+                }
             }
         }
     </script>
