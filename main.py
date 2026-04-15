@@ -51,8 +51,8 @@ async def chat_endpoint(request: ChatRequest):
                 "HTTP-Referer": "http://localhost:8000", # Replace with your site URL
                 "X-OpenRouter-Title": "FastAPI Custom Bot", # Replace with your site name
             },
-            # model="mistralai/ministral-3b-2512",
-            model="meta-llama/llama-3.2-3b-instruct",
+            model="mistralai/ministral-3b-2512",
+            # model="meta-llama/llama-3.2-3b-instruct",
             messages=api_messages
         )
         
