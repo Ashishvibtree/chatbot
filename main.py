@@ -5,6 +5,7 @@ from typing import List
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
+import re # <-- Added import for regex
 
 load_dotenv()
 
@@ -56,9 +57,14 @@ async def chat_endpoint(request: ChatRequest):
             messages=api_messages
         )
         
-        # 3. Return the AI's response
+        # 3. Get the AI's response
         bot_reply = completion.choices[0].message.content
-        return {"reply": bot_reply}
+        
+        # 4. Clean the response: Strip out markdown formatting symbols (*, _, #, `, ~, [, ])
+        cleaned_reply = re.sub(r'[*_#`~\[\]]', '', bot_reply)
+        
+        # Return the cleaned text
+        return {"reply": cleaned_reply}
 
     except Exception as e:
         print(f"Error: {e}")
